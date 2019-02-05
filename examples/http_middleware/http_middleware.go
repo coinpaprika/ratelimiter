@@ -63,8 +63,10 @@ func rateLimitMiddleware(rateLimiter *ratelimiter.RateLimiter) func(http.Handler
 			if limitStatus.IsLimited {
 				w.WriteHeader(http.StatusTooManyRequests)
 				return
-			} else {
-				rateLimiter.Inc(key)
+			}
+
+			if err := rateLimiter.Inc(key); err != nil {
+				log.Printf("could not increment key: %s", key)
 			}
 
 			next.ServeHTTP(w, r)
@@ -73,7 +75,7 @@ func rateLimitMiddleware(rateLimiter *ratelimiter.RateLimiter) func(http.Handler
 }
 
 func hello(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+  _, _ = fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
 }
 
 func main() {
