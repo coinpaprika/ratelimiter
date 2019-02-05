@@ -27,12 +27,10 @@ func NewMapLimitStore(expirationTime time.Duration, flushInterval time.Duration)
 	go func() {
 		ticker := time.NewTicker(flushInterval)
 		for range ticker.C {
-			var deletedKeys []string
 			for key, val := range m.data {
 				if val.lastUpdate.Before(time.Now().UTC().Add(-m.expirationTime)) {
 					m.mutex.Lock()
 					delete(m.data, key)
-					deletedKeys = append(deletedKeys, key)
 					m.mutex.Unlock()
 				}
 			}
