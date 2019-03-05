@@ -92,3 +92,33 @@ func TestMapLimitStore_Get(t *testing.T) {
 		assert.Equal(t, tt.wantCurrValue, currVal)
 	}
 }
+
+func TestMapLimitStore_Size(t *testing.T) {
+	tests := []struct {
+		name   string
+		key    string
+		window time.Time
+		size   int
+	}{
+		{
+			name:   "test_MapLimitStore_Size",
+			key:    "tt",
+			window: time.Now().UTC(),
+			size:   1,
+		},
+		{
+			name:   "test_MapLimitStore_Size",
+			key:    "tt",
+			window: time.Time{},
+			size:   0,
+		},
+	}
+	for _, tt := range tests {
+		m := NewMapLimitStore(1*time.Minute, 10*time.Second)
+		if !tt.window.IsZero() {
+			err := m.Inc(tt.key, tt.window)
+			assert.NoError(t, err)
+		}
+		assert.Equal(t, tt.size, m.Size())
+	}
+}

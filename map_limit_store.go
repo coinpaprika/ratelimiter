@@ -60,6 +60,13 @@ func (m *MapLimitStore) Get(key string, previousWindow, currentWindow time.Time)
 	return prevValue, currValue, nil
 }
 
+// Size returns current length of data map
+func (m *MapLimitStore) Size() int {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return len(m.data)
+}
+
 func mapKey(key string, window time.Time) string {
 	return fmt.Sprintf("%s_%s", key, window.Format(time.RFC3339))
 }
