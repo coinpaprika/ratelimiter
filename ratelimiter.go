@@ -21,7 +21,7 @@ func New(dataStore LimitStore, requestsLimit int64, windowSize time.Duration) *R
 	}
 }
 
-// Inc increments limiter counter for a given key or returns error when it's not possible. Inc should be called when a request for a given limited resource has been fulfilled
+// Inc increments limiter counter for a given key or returns error when it's not possible
 func (r *RateLimiter) Inc(key string) error {
 	currentWindow := time.Now().UTC().Truncate(r.windowSize)
 	return r.dataStore.Inc(key, currentWindow)
@@ -49,7 +49,7 @@ func (r *RateLimiter) Check(key string) (limitStatus *LimitStatus, err error) {
 
 	rate := float64((float64(r.windowSize)-float64(timeFromCurrWindow))/float64(r.windowSize))*float64(prevValue) + float64(currentValue)
 	limitStatus = &LimitStatus{}
-	if rate > float64(r.requestsLimit) {
+	if rate >= float64(r.requestsLimit) {
 		limitStatus.IsLimited = true
 		limitDuration := r.calcLimitDuration(prevValue, currentValue, timeFromCurrWindow)
 		limitStatus.LimitDuration = &limitDuration
@@ -73,9 +73,14 @@ func (r *RateLimiter) calcLimitDuration(prevValue, currValue int64, timeFromCurr
 	var limitDuration time.Duration
 	if prevValue == 0 {
 		// unblock in the next window where prevValue is currValue and currValue is zero (assuming that since limit start all requests are blocked)
-		nextWindowUnblockPoint := float64(r.windowSize) * (1.0 - (float64(r.requestsLimit) / float64(currValue)))
-		timeToNextWindow := r.windowSize - timeFromCurrWindow
-		limitDuration = timeToNextWindow + time.Duration(int64(nextWindowUnblockPoint)+1)
+		if currValue != 0 {
+			nextWindowUnblockPoint := float64(r.windowSize) * (1.0 - (float64(r.requestsLimit) / float64(currValue)))
+			timeToNextWindow := r.windowSize - timeFromCurrWindow
+			limitDuration = timeToNextWindow + time.Duration(int64(nextWindowUnblockPoint)+1)
+		} else {
+			// when requestsLimit is 0 we want to block all requests - set limitDuration to -1
+			limitDuration = -1
+		}
 	} else {
 		currWindowUnblockPoint := float64(r.windowSize) * (1.0 - (float64(r.requestsLimit-currValue) / float64(prevValue)))
 		limitDuration = time.Duration(int64(currWindowUnblockPoint+1)) - timeFromCurrWindow
