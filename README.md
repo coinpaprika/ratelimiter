@@ -64,10 +64,8 @@ func rateLimitMiddleware(rateLimiter *ratelimiter.RateLimiter) func(http.Handler
 			if limitStatus.IsLimited {
 				w.WriteHeader(http.StatusTooManyRequests)
 				return
-			} else {
-				rateLimiter.Inc(key)
-			}
-
+			} 
+			rateLimiter.Inc(key)
 			next.ServeHTTP(w, r)
 		})
 	}
