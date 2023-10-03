@@ -83,8 +83,8 @@ func TestMapLimitStore_Get(t *testing.T) {
 	}
 	for _, tt := range tests {
 		m := NewMapLimitStore(1*time.Minute, 10*time.Second)
-		m.data[mapKey(tt.args.key, tt.args.previousWindow)] = limitValue{val: tt.wantPrevValue}
-		m.data[mapKey(tt.args.key, tt.args.currentWindow)] = limitValue{val: tt.wantCurrValue}
+		m.data[tt.args.previousWindow.UnixNano()] = map[string]int64{tt.args.key: tt.wantPrevValue}
+		m.data[tt.args.currentWindow.UnixNano()] = map[string]int64{tt.args.key: tt.wantCurrValue}
 
 		prevVal, currVal, err := m.Get(tt.args.key, tt.args.previousWindow, tt.args.currentWindow)
 		assert.NoError(t, err)
