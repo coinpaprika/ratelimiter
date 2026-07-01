@@ -54,7 +54,7 @@ func (m *MapLimitStore) flushExpired() {
 	}
 }
 
-// Close stops the background flush goroutine. It is safe to call multiple times. The store must not be used after Close returns
+// Close stops the background flush goroutine. It is safe to call multiple times. Closing only disables periodic cleanup; Inc/Get/Size continue to work normally
 func (m *MapLimitStore) Close() {
 	m.closeOnce.Do(func() {
 		close(m.done)
