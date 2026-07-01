@@ -1,6 +1,7 @@
 # ratelimiter
 
-[![go-doc](https://godoc.org/github.com/coinpaprika/ratelimiter?status.svg)](https://godoc.org/github.com/coinpaprika/ratelimiter)
+[![CI](https://github.com/coinpaprika/ratelimiter/actions/workflows/ci.yml/badge.svg)](https://github.com/coinpaprika/ratelimiter/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/coinpaprika/ratelimiter.svg)](https://pkg.go.dev/github.com/coinpaprika/ratelimiter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/coinpaprika/ratelimiter)](https://goreportcard.com/report/github.com/coinpaprika/ratelimiter)
 
 Simple rate limiter for any resources inspired by Cloudflare's approach: [How we built rate limiting capable of scaling to millions of domains.](https://blog.cloudflare.com/counting-things-a-lot-of-different-things/)
@@ -25,6 +26,7 @@ func main() {
 	windowSize := 1 * time.Minute
 
 	dataStore := ratelimiter.NewMapLimitStore(2*windowSize, 10*time.Second) // create map data store for rate limiter and set each element's expiration time to 2*windowSize and old data flush interval to 10*time.Second
+	defer dataStore.Close()                                                 // stop the background flush goroutine when done
 
 	var maxLimit int64 = 5
 	rateLimiter := ratelimiter.New(dataStore, maxLimit, windowSize) // allow 5 requests per windowSize (1 minute)

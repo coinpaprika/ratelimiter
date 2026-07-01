@@ -75,7 +75,7 @@ func rateLimitMiddleware(rateLimiter *ratelimiter.RateLimiter) func(http.Handler
 }
 
 func hello(w http.ResponseWriter, r *http.Request) {
-  _, _ = fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+	_, _ = fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
 }
 
 func main() {

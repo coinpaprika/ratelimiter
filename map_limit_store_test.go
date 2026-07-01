@@ -93,6 +93,32 @@ func TestMapLimitStore_Get(t *testing.T) {
 	}
 }
 
+func TestMapLimitStore_flushExpired(t *testing.T) {
+	m := NewMapLimitStore(50*time.Millisecond, 1*time.Hour)
+	defer m.Close()
+
+	now := time.Now().UTC()
+m.mutex.Lock()
+m.data[mapKey("fresh", now)] = limitValue{val: 1, lastUpdate: now}
+m.data[mapKey("stale", now)] = limitValue{val: 1, lastUpdate: now.Add(-1 * time.Hour)}
+m.mutex.Unlock()
+	m.flushExpired()
+
+	assert.Equal(t, 1, m.Size())
+	prevVal, _, err := m.Get("fresh", now, now)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(1), prevVal)
+}
+
+func TestMapLimitStore_Close(t *testing.T) {
+	m := NewMapLimitStore(1*time.Minute, 10*time.Millisecond)
+	// Close stops the background goroutine and must be safe to call multiple times.
+	assert.NotPanics(t, func() {
+		m.Close()
+		m.Close()
+	})
+}
+
 func TestMapLimitStore_Size(t *testing.T) {
 	tests := []struct {
 		name   string

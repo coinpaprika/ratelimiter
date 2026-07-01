@@ -16,27 +16,49 @@ type MapLimitStore struct {
 	data           map[string]limitValue
 	mutex          sync.RWMutex
 	expirationTime time.Duration
+	done           chan struct{}
+	closeOnce      sync.Once
 }
 
-// NewMapLimitStore creates new in-memory data store for internal limiter data. Each element of MapLimitStore is set as expired after expirationTime from its last counter increment. Expired elements are removed with a period specified by the flushInterval argument
+// NewMapLimitStore creates new in-memory data store for internal limiter data. Each element of MapLimitStore is set as expired after expirationTime from its last counter increment. Expired elements are removed with a period specified by the flushInterval argument. Call Close to stop the background flush goroutine when the store is no longer needed
 func NewMapLimitStore(expirationTime time.Duration, flushInterval time.Duration) (m *MapLimitStore) {
 	m = &MapLimitStore{
 		data:           make(map[string]limitValue),
 		expirationTime: expirationTime,
+		done:           make(chan struct{}),
 	}
 	go func() {
 		ticker := time.NewTicker(flushInterval)
-		for range ticker.C {
-			m.mutex.Lock()
-			for key, val := range m.data {
-				if val.lastUpdate.Before(time.Now().UTC().Add(-m.expirationTime)) {
-					delete(m.data, key)
-				}
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				m.flushExpired()
+			case <-m.done:
+				return
 			}
-			m.mutex.Unlock()
 		}
 	}()
 	return m
+}
+
+// flushExpired removes all elements whose last update is older than expirationTime
+func (m *MapLimitStore) flushExpired() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	threshold := time.Now().UTC().Add(-m.expirationTime)
+	for key, val := range m.data {
+		if val.lastUpdate.Before(threshold) {
+			delete(m.data, key)
+		}
+	}
+}
+
+// Close stops the background flush goroutine. It is safe to call multiple times. Closing only disables periodic cleanup; Inc/Get/Size continue to work normally
+func (m *MapLimitStore) Close() {
+	m.closeOnce.Do(func() {
+		close(m.done)
+	})
 }
 
 // Inc increments current window limit counter for key

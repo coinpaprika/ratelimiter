@@ -47,7 +47,7 @@ func (r *RateLimiter) Check(key string) (limitStatus *LimitStatus, err error) {
 	}
 	timeFromCurrWindow := time.Now().UTC().Sub(currentWindow)
 
-	rate := float64((float64(r.windowSize)-float64(timeFromCurrWindow))/float64(r.windowSize))*float64(prevValue) + float64(currentValue)
+	rate := r.calcRate(timeFromCurrWindow, prevValue, currentValue)
 	limitStatus = &LimitStatus{}
 	if rate >= float64(r.requestsLimit) {
 		limitStatus.IsLimited = true
