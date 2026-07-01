@@ -13,6 +13,7 @@ func main() {
 	windowSize := 1 * time.Minute
 
 	dataStore := ratelimiter.NewMapLimitStore(2*windowSize, 10*time.Second) // create map data store for rate limiter and set each element's expiration time to 2*windowSize and old data flush interval to 10*time.Second
+	defer dataStore.Close()                                                 // stop the background flush goroutine when done
 
 	var maxLimit int64 = 5
 	rateLimiter := ratelimiter.New(dataStore, maxLimit, windowSize) // allow 5 requests per windowSize (1 minute)
