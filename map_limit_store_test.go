@@ -98,9 +98,10 @@ func TestMapLimitStore_flushExpired(t *testing.T) {
 	defer m.Close()
 
 	now := time.Now().UTC()
-	m.data[mapKey("fresh", now)] = limitValue{val: 1, lastUpdate: now}
-	m.data[mapKey("stale", now)] = limitValue{val: 1, lastUpdate: now.Add(-1 * time.Hour)}
-
+m.mutex.Lock()
+m.data[mapKey("fresh", now)] = limitValue{val: 1, lastUpdate: now}
+m.data[mapKey("stale", now)] = limitValue{val: 1, lastUpdate: now.Add(-1 * time.Hour)}
+m.mutex.Unlock()
 	m.flushExpired()
 
 	assert.Equal(t, 1, m.Size())
