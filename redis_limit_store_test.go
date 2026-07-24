@@ -180,3 +180,58 @@ func TestRedisLimitStore_RateLimiter(t *testing.T) {
 	assert.True(t, status.IsLimited)
 	assert.NotNil(t, status.LimitDuration)
 }
+
+func TestRedisLimitStore_Pipeline_IncError(t *testing.T) {
+	store, mr := newTestRedisStore(t, "ratelimiter:", 1*time.Minute)
+	window := time.Now().UTC()
+
+	key := store.redisKey("bad_key", window)
+	require.NoError(t, mr.Set(key, "not_a_number"))
+
+	err := store.Inc("bad_key", window)
+	assert.Error(t, err)
+}
+
+func TestRedisLimitStore_Pipeline_GetOneKeyMissing(t *testing.T) {
+	store, _ := newTestRedisStore(t, "ratelimiter:", 1*time.Minute)
+	previousWindow := time.Now().UTC().Add(-1 * time.Minute)
+	currentWindow := time.Now().UTC()
+
+	require.NoError(t, store.Inc("tt", previousWindow))
+
+	prevVal, currVal, err := store.Get("tt", previousWindow, currentWindow)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(1), prevVal)
+	assert.Equal(t, int64(0), currVal)
+}
+
+func TestRedisLimitStore_Pipeline_GetOneKeyInvalidValue(t *testing.T) {
+	store, mr := newTestRedisStore(t, "ratelimiter:", 1*time.Minute)
+	previousWindow := time.Now().UTC().Add(-1 * time.Minute)
+	currentWindow := time.Now().UTC()
+
+	require.NoError(t, store.Inc("tt", previousWindow))
+	currKey := store.redisKey("tt", currentWindow)
+	require.NoError(t, mr.Set(currKey, "corrupted_val"))
+
+	prevVal, currVal, err := store.Get("tt", previousWindow, currentWindow)
+	assert.Error(t, err)
+	assert.Zero(t, prevVal)
+	assert.Zero(t, currVal)
+}
+
+func TestRedisLimitStore_Pipeline_GetWrongType(t *testing.T) {
+	store, mr := newTestRedisStore(t, "ratelimiter:", 1*time.Minute)
+	previousWindow := time.Now().UTC().Add(-1 * time.Minute)
+	currentWindow := time.Now().UTC()
+
+	prevKey := store.redisKey("tt", previousWindow)
+	mr.HSet(prevKey, "field", "value")
+
+	require.NoError(t, store.Inc("tt", currentWindow))
+
+	prevVal, currVal, err := store.Get("tt", previousWindow, currentWindow)
+	assert.Error(t, err)
+	assert.Zero(t, prevVal)
+	assert.Zero(t, currVal)
+}
