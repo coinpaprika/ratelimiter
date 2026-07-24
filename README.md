@@ -92,6 +92,19 @@ func main() {
 ```
 See full [example](./examples/http_middleware/http_middleware.go)
 
+### Share rate-limit state across processes with Redis
+
+`NewMapLimitStore` keeps counters in-process, so each instance of a service enforces its own limit. To share limits across a horizontally-scaled fleet, use the built-in Redis-backed store. It accepts any [go-redis](https://github.com/redis/go-redis) client (single node, cluster or sentinel), and relies on native Redis TTLs for expiration instead of a background flush goroutine:
+
+```go
+client := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+
+windowSize := 1 * time.Minute
+dataStore := ratelimiter.NewRedisLimitStore(client, 2*windowSize) 
+
+rateLimiter := ratelimiter.New(dataStore, 5, windowSize)
+```
+
 ### Implement your own limit data store
 To use custom data store (memcached, Redis, MySQL etc.) you just need to implement [LimitStore](./limit_store.go) interface:
 ```go
